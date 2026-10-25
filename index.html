@@ -1,0 +1,228 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Boşluk Doldur</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap">
+<style>
+/* Concept: un texte à trous par écran. Trois couleurs fixes pour les trois cas (lieu, origine, direction), vert/rouge réservés à la correction. */
+:root{--bg:#f3f6f8;--surface:#ffffff;--ink:#14263a;--muted:#5b6b7c;--line:#d5dee6;--accent:#1d4f91;--accent-ink:#ffffff;--soft:#e4eef7;
+--da:#0f7a7c;--dabg:#d9f0f0;--dan:#a85a00;--danbg:#fbead2;--ya:#6a3fb0;--yabg:#ebe2f8;
+--good:#1e7a4d;--goodbg:#dff3e8;--bad:#b3402a;--badbg:#fae4de;--display:'Literata',Georgia,serif;--body:'Figtree',system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a26;--surface:#162636;--ink:#e6eef6;--muted:#93a6b9;--line:#2a3f54;--accent:#6aa5ea;--accent-ink:#0e1a26;--soft:#1d3349;
+--da:#5dcaca;--dabg:#12383a;--dan:#f0b062;--danbg:#40300f;--ya:#b99af0;--yabg:#2b1f48;
+--good:#5fd196;--goodbg:#173a2a;--bad:#f09a85;--badbg:#412219;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1a26;--surface:#162636;--ink:#e6eef6;--muted:#93a6b9;--line:#2a3f54;--accent:#6aa5ea;--accent-ink:#0e1a26;--soft:#1d3349;
+--da:#5dcaca;--dabg:#12383a;--dan:#f0b062;--danbg:#40300f;--ya:#b99af0;--yabg:#2b1f48;
+--good:#5fd196;--goodbg:#173a2a;--bad:#f09a85;--badbg:#412219;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--display);font-size:1.9rem;line-height:1.1;margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-size:1.3rem;margin:0}
+.sub{color:var(--muted);margin:4px 0 0;font-size:.95rem}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--da);outline-offset:2px}
+.head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.themebtn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:4px 10px;font-size:.85rem;color:var(--muted)}
+.rules{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.rules summary{padding:12px 14px;font-weight:600;cursor:pointer}
+.rules .in{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px;font-size:.95rem}
+.rule{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:baseline}
+.tag{display:inline-block;border-radius:6px;padding:2px 8px;font-weight:700;font-size:.85rem;white-space:nowrap}
+.tag.DA{background:var(--dabg);color:var(--da)}.tag.DAn{background:var(--danbg);color:var(--dan)}.tag.A{background:var(--yabg);color:var(--ya)}
+.tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid var(--line)}
+.tabs button{background:none;border:0;padding:10px 2px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button[aria-selected="true"]{color:var(--accent);border-color:var(--accent)}
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pick button{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:6px 12px;min-height:38px;font-size:.92rem;display:flex;gap:6px;align-items:center}
+.pick button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pick .sc{font-size:.8rem;font-variant-numeric:tabular-nums;opacity:.85}
+.text{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+.text p{margin:0;font-size:1.12rem;line-height:2.5;overflow-wrap:anywhere}
+.text .ttl{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.text .ttl span{color:var(--muted);font-size:.9rem}
+.blank{display:inline-flex;align-items:center;gap:0;vertical-align:baseline;white-space:nowrap}
+.blank select{margin-left:1px;appearance:auto;background:var(--soft);border:0;border-bottom:3px solid var(--accent);border-radius:6px 6px 0 0;padding:2px 4px;min-height:36px;min-width:3.6em;font-size:1rem;color:var(--ink)}
+.blank select.ok{background:var(--goodbg);border-color:var(--good);color:var(--good);font-weight:700}
+.blank select.no{background:var(--badbg);border-color:var(--bad);color:var(--bad);font-weight:700}
+.blank select:disabled{opacity:1;-webkit-text-fill-color:currentColor}
+.fix{font-size:.85rem;font-weight:700;color:var(--good);background:var(--goodbg);border-radius:6px;padding:0 6px}
+details.tr{font-size:.95rem;color:var(--muted)}
+details.tr summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 16px;min-height:46px;font-weight:600;flex:1;min-width:140px}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.result{border-radius:12px;padding:14px;background:var(--soft);display:flex;flex-direction:column;gap:10px}
+.score{font-family:var(--display);font-size:1.5rem;font-weight:700}
+.err{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px;font-size:.95rem}
+.err .w{font-family:var(--display);font-size:1.1rem;font-weight:700}
+.err .bad{color:var(--bad);text-decoration:line-through}
+.err .good{color:var(--good)}
+.err small{color:var(--muted);font-size:.9rem}
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar{display:grid;grid-template-columns:7.5em 1fr 3.2em;gap:10px;align-items:center;font-size:.92rem}
+.bar i{display:block;height:12px;border-radius:6px;background:var(--line);position:relative;overflow:hidden}
+.bar i b{position:absolute;inset:0 auto 0 0;border-radius:6px}
+.bar i b.DA{background:var(--da)}.bar i b.DAn{background:var(--dan)}.bar i b.A{background:var(--ya)}.bar i b.v{background:var(--accent)}
+.bar span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.note{color:var(--muted);font-size:.92rem}
+.verdict{background:var(--soft);border-radius:12px;padding:14px;font-size:1rem}
+@media (max-width:420px){.bar{grid-template-columns:5.6em 1fr 3em}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="wrap">
+ <div class="head"><div><h1>Boşluk Doldur</h1><p class="sub">Complète les terminaisons -DA, -DAn et -(y)A dans de petits textes</p></div><button class="themebtn" id="theme" type="button">Thème</button></div>
+ <details class="rules" id="rules"><summary>Rappel des 3 terminaisons</summary><div class="in">
+  <div class="rule"><span class="tag DA">da de ta te</span><span><b>Lieu</b> : où ? À, en, dans, sur. Aussi avec <i>var</i> et <i>yok</i> : <i>evde var</i>.</span></div>
+  <div class="rule"><span class="tag DAn">dan den tan ten</span><span><b>Origine, départ</b> : d'où ? De, depuis. Aussi après certains verbes : <i>korkmak</i>, <i>istemek</i>.</span></div>
+  <div class="rule"><span class="tag A">a e ya ye</span><span><b>Direction</b> : vers où ? Ou à qui ? <i>okula gidiyorum</i>, <i>öğretmene soruyorum</i>.</span></div>
+  <div><b>Voyelle :</b> a ı o u → <b>a</b> · e i ö ü → <b>e</b>. On regarde la dernière voyelle du mot.</div>
+  <div><b>d ou t :</b> après ç f h k p s ş t, le d devient <b>t</b> (<i>kitapta</i>, <i>markette</i>, <i>işten</i>). Sinon d.</div>
+  <div><b>y :</b> seul -(y)A prend un y après une voyelle : <i>odaya</i>, mais <i>odada</i> et <i>odadan</i>.</div>
+ </div></details>
+ <div class="tabs" role="tablist"><button role="tab" data-m="ex" aria-selected="true">Exercice</button><button role="tab" data-m="stats" aria-selected="false">Mes points faibles</button></div>
+ <div id="main"></div>
+</div>
+<script>
+const DATA={"texts":[{"id":"t1","tr":"Benim günüm","fr":"Ma journée","p":[["Ben Çad'",{"a":"dan","c":"DAn","s":"Çad'","n":""}," geliyorum ama şimdi İstanbul'",{"a":"da","c":"DA","s":"İstanbul'","n":""}," oturuyorum. Her sabah saat yedi",{"a":"de","c":"DA","s":"yedi","n":""}," uyanıyorum. Saat sekiz",{"a":"de","c":"DA","s":"sekiz","n":""}," ev",{"a":"den","c":"DAn","s":"ev","n":""}," çıkıyorum ve otobüs",{"a":"e","c":"A","s":"otobüs","n":""}," biniyorum."],["Okul",{"a":"a","c":"A","s":"Okul","n":""}," gidiyorum. Okul",{"a":"da","c":"DA","s":"Okul","n":""}," Türkçe öğreniyorum. Öğle",{"a":"den","c":"DAn","s":"Öğle","n":""}," sonra kütüphane",{"a":"de","c":"DA","s":"kütüphane","n":""}," ders çalışıyorum. Akşam ev",{"a":"e","c":"A","s":"ev","n":""}," dönüyorum. Gece saat on bir",{"a":"de","c":"DA","s":"bir","n":""}," uyuyorum."]],"t":"Je viens du Tchad mais j'habite maintenant à Istanbul. Chaque matin, je me réveille à sept heures. À huit heures, je sors de la maison et je monte dans le bus. Je vais à l'école. À l'école, j'apprends le turc. L'après-midi, je révise à la bibliothèque. Le soir, je rentre à la maison. La nuit, je dors à onze heures."},{"id":"t2","tr":"Ailem","fr":"Ma famille","p":[["Ailem Ankara'",{"a":"da","c":"DA","s":"Ankara'","n":""}," yaşıyor. Babam hastane",{"a":"de","c":"DA","s":"hastane","n":""}," çalışıyor, annem okul",{"a":"da","c":"DA","s":"okul","n":""}," öğretmen. Kardeşim üniversite",{"a":"ye","c":"A","s":"üniversite","n":""}," gidiyor."],["Annem market",{"a":"ten","c":"DAn","s":"market","n":"On achète « au » marché, « chez » le marchand : en turc, on dit « depuis le marché », donc -DAn."}," ekmek alıyor. Akşam mutfak",{"a":"ta","c":"DA","s":"mutfak","n":""}," yemek hazırlıyoruz."],["Büyükannem köy",{"a":"de","c":"DA","s":"köy","n":""}," yaşıyor. Hafta sonu biz Ankara'",{"a":"dan","c":"DAn","s":"Ankara'","n":""}," köy",{"a":"e","c":"A","s":"köy","n":""}," gidiyoruz."]],"t":"Ma famille vit à Ankara. Mon père travaille à l'hôpital, ma mère est enseignante dans une école. Mon frère (ou ma sœur) va à l'université. Ma mère achète du pain au marché. Le soir, nous préparons le repas dans la cuisine. Ma grand-mère vit au village. Le week-end, nous allons d'Ankara au village."},{"id":"t3","tr":"Şehirde bir gün","fr":"Une journée en ville","p":[["Bugün şehir",{"a":"de","c":"DA","s":"şehir","n":""}," geziyorum. Önce otel",{"a":"den","c":"DAn","s":"otel","n":""}," çıkıyorum. Metro",{"a":"ya","c":"A","s":"Metro","n":""}," biniyorum ve Taksim'",{"a":"de","c":"DA","s":"Taksim'","n":""}," iniyorum."],["Meydan",{"a":"da","c":"DA","s":"Meydan","n":""}," büyük bir cami var. Cami",{"a":"ye","c":"A","s":"Cami","n":""}," giriyorum. Cami",{"a":"den","c":"DAn","s":"Cami","n":""}," sonra çarşı",{"a":"ya","c":"A","s":"çarşı","n":""}," gidiyorum. Çarşı",{"a":"da","c":"DA","s":"Çarşı","n":""}," halı ve çay satıyorlar."],["Akşam otel",{"a":"e","c":"A","s":"otel","n":""}," dönüyorum ve oda",{"a":"da","c":"DA","s":"oda","n":""}," dinleniyorum."]],"t":"Aujourd'hui, je me promène en ville. D'abord, je sors de l'hôtel. Je monte dans le métro et je descends à Taksim. Sur la place, il y a une grande mosquée. J'entre dans la mosquée. Après la mosquée, je vais au bazar. Au bazar, on vend des tapis et du thé. Le soir, je rentre à l'hôtel et je me repose dans la chambre."},{"id":"t4","tr":"Sınıfta","fr":"En classe","p":[["Biz sınıf",{"a":"ta","c":"DA","s":"sınıf","n":""}," Türkçe öğreniyoruz. Ders saat dokuz",{"a":"da","c":"DA","s":"dokuz","n":""}," başlıyor. Öğretmen tahta",{"a":"ya","c":"A","s":"tahta","n":""}," yazıyor."],["Masa",{"a":"da","c":"DA","s":"Masa","n":""}," üç kitap var. Çanta",{"a":"da","c":"DA","s":"Çanta","n":""}," kalem yok. Teneffüs",{"a":"te","c":"DA","s":"Teneffüs","n":""}," bahçe",{"a":"ye","c":"A","s":"bahçe","n":""}," çıkıyoruz."],["Saat üç",{"a":"te","c":"DA","s":"üç","n":""}," sınıf",{"a":"tan","c":"DAn","s":"sınıf","n":""}," çıkıyoruz ve ev",{"a":"e","c":"A","s":"ev","n":""}," gidiyoruz."]],"t":"Nous apprenons le turc en classe. Le cours commence à neuf heures. Le professeur écrit au tableau. Sur la table, il y a trois livres. Dans le sac, il n'y a pas de stylo. À la récréation, nous sortons dans la cour. À trois heures, nous sortons de la classe et nous allons à la maison."},{"id":"t5","tr":"Markette","fr":"Au marché","p":[["Bugün çarşı",{"a":"ya","c":"A","s":"çarşı","n":""}," gidiyorum. Fırın",{"a":"dan","c":"DAn","s":"Fırın","n":""}," ekmek, manav",{"a":"dan","c":"DAn","s":"manav","n":""}," meyve alıyorum. Sonra market",{"a":"e","c":"A","s":"market","n":""}," giriyorum."],["Market",{"a":"te","c":"DA","s":"Market","n":""}," peynir ve süt var. Kasa",{"a":"da","c":"DA","s":"Kasa","n":""}," uzun bir sıra var. Kasa",{"a":"ya","c":"A","s":"Kasa","n":""}," gidiyorum ve para ödüyorum."],["Çanta",{"a":"ya","c":"A","s":"Çanta","n":""}," meyve koyuyorum. Market",{"a":"ten","c":"DAn","s":"Market","n":""}," çıkıyorum ve ev",{"a":"e","c":"A","s":"ev","n":""}," dönüyorum."]],"t":"Aujourd'hui, je vais au bazar. J'achète du pain à la boulangerie et des fruits chez le marchand de fruits. Ensuite, j'entre dans un supermarché. Au supermarché, il y a du fromage et du lait. À la caisse, il y a une longue file. Je vais à la caisse et je paie. Je mets les fruits dans le sac. Je sors du supermarché et je rentre à la maison."},{"id":"t6","tr":"Seyahat","fr":"Un voyage","p":[["Bu hafta sonu İzmir'",{"a":"den","c":"DAn","s":"İzmir'","n":""}," Ankara'",{"a":"ya","c":"A","s":"Ankara'","n":""}," gidiyorum. Ev",{"a":"den","c":"DAn","s":"Ev","n":""}," çıkıyorum ve durak",{"a":"ta","c":"DA","s":"durak","n":""}," otobüs bekliyorum."],["Otobüs",{"a":"e","c":"A","s":"Otobüs","n":""}," biniyorum ve istasyon",{"a":"a","c":"A","s":"istasyon","n":""}," gidiyorum. İstasyon",{"a":"da","c":"DA","s":"İstasyon","n":""}," bilet alıyorum. Tren",{"a":"e","c":"A","s":"Tren","n":""}," biniyorum. Vagon",{"a":"da","c":"DA","s":"Vagon","n":""}," çok insan var."],["Tren İzmir'",{"a":"den","c":"DAn","s":"İzmir'","n":""}," kalkıyor ve Ankara'",{"a":"ya","c":"A","s":"Ankara'","n":""}," varıyor. Ankara'",{"a":"da","c":"DA","s":"Ankara'","n":""}," bir otel",{"a":"de","c":"DA","s":"otel","n":""}," kalıyorum."]],"t":"Ce week-end, je vais d'Izmir à Ankara. Je sors de la maison et j'attends le bus à l'arrêt. Je monte dans le bus et je vais à la gare. À la gare, j'achète un billet. Je monte dans le train. Dans le wagon, il y a beaucoup de monde. Le train part d'Izmir et arrive à Ankara. À Ankara, je reste dans un hôtel."},{"id":"t7","tr":"Hastanede","fr":"À l'hôpital","p":[["Başım ağrıyor. Hastane",{"a":"ye","c":"A","s":"Hastane","n":""}," gidiyorum. Hastane",{"a":"de","c":"DA","s":"Hastane","n":""}," çok insan var. Doktor",{"a":"a","c":"A","s":"Doktor","n":""}," « başım ağrıyor » diyorum. Doktor bana ilaç yazıyor."],["Eczane",{"a":"ye","c":"A","s":"Eczane","n":""}," gidiyorum. Eczane",{"a":"den","c":"DAn","s":"Eczane","n":""}," ilaç alıyorum. Ev",{"a":"e","c":"A","s":"Ev","n":""}," dönüyorum ve yatak",{"a":"ta","c":"DA","s":"yatak","n":""}," dinleniyorum. Gün",{"a":"de","c":"DA","s":"Gün","n":""}," üç kez ilaç alıyorum."]],"t":"J'ai mal à la tête. Je vais à l'hôpital. À l'hôpital, il y a beaucoup de monde. Je dis au docteur : « j'ai mal à la tête ». Le docteur me prescrit un médicament. Je vais à la pharmacie. J'achète le médicament à la pharmacie. Je rentre à la maison et je me repose au lit. Je prends le médicament trois fois par jour."},{"id":"t8","tr":"Lokantada","fr":"Au restaurant","p":[["Biz akşam lokanta",{"a":"ya","c":"A","s":"lokanta","n":""}," gidiyoruz. Lokanta",{"a":"da","c":"DA","s":"Lokanta","n":""}," güzel bir masa var. Garson",{"a":"dan","c":"DAn","s":"Garson","n":"« Demander quelque chose à quelqu'un » : istemek veut -DAn."}," su ve çorba istiyoruz."],["Çorba",{"a":"dan","c":"DAn","s":"Çorba","n":""}," sonra köfte yiyoruz. Saat sekiz",{"a":"de","c":"DA","s":"sekiz","n":""}," lokanta",{"a":"dan","c":"DAn","s":"lokanta","n":""}," çıkıyoruz. Taksi",{"a":"ye","c":"A","s":"Taksi","n":""}," biniyoruz ve ev",{"a":"e","c":"A","s":"ev","n":""}," dönüyoruz."]],"t":"Le soir, nous allons au restaurant. Au restaurant, il y a une belle table. Nous demandons de l'eau et de la soupe au serveur. Après la soupe, nous mangeons des boulettes de viande. À huit heures, nous sortons du restaurant. Nous prenons un taxi et nous rentrons à la maison."},{"id":"t9","tr":"Telefonda","fr":"Au téléphone","p":[["— Alo, Ali! Ben şimdi iş",{"a":"te","c":"DA","s":"iş","n":""},"yim. Sen neredesin?"],["— Merhaba Ayşe! Ben ev",{"a":"de","c":"DA","s":"ev","n":""},"yim. Akşam sinema",{"a":"ya","c":"A","s":"sinema","n":""}," gidiyorum. Sen de gelebilir misin?"],["— Evet, gelebilirim. Ben iş",{"a":"ten","c":"DAn","s":"iş","n":""}," saat altı",{"a":"da","c":"DA","s":"altı","n":""}," çıkıyorum. Saat yedi",{"a":"de","c":"DA","s":"yedi","n":""}," sinema",{"a":"da","c":"DA","s":"sinema","n":""}," buluşuyoruz."],["— Tamam, görüşürüz!"]],"t":"— Allô, Ali ! Je suis au travail maintenant. Où es-tu ? — Salut Ayşe ! Je suis à la maison. Ce soir, je vais au cinéma. Tu peux venir aussi ? — Oui, je peux venir. Je sors du travail à six heures. On se retrouve à sept heures au cinéma. — D'accord, à tout à l'heure !"},{"id":"t10","tr":"Hafta sonu","fr":"Le week-end","p":[["Cumartesi sabah park",{"a":"ta","c":"DA","s":"park","n":""}," yürüyorum. Park",{"a":"tan","c":"DAn","s":"Park","n":""}," sonra kafe",{"a":"ye","c":"A","s":"kafe","n":""}," gidiyorum. Kafe",{"a":"de","c":"DA","s":"Kafe","n":""}," çay içiyoruz."],["Pazar günü deniz",{"a":"e","c":"A","s":"deniz","n":""}," gidiyoruz. Deniz",{"a":"de","c":"DA","s":"Deniz","n":""}," yüzüyoruz. Akşam sahil",{"a":"den","c":"DAn","s":"sahil","n":""}," ev",{"a":"e","c":"A","s":"ev","n":""}," dönüyoruz."]],"t":"Samedi matin, je marche dans le parc. Après le parc, je vais au café. Au café, nous buvons du thé. Dimanche, nous allons à la mer. Dans la mer, nous nageons. Le soir, nous rentrons de la plage à la maison."},{"id":"t11","tr":"Yeni evim","fr":"Mon nouvel appartement","p":[["Yeni evim üçüncü kat",{"a":"ta","c":"DA","s":"kat","n":""},". Ev",{"a":"de","c":"DA","s":"Ev","n":""}," üç oda var. Mutfak",{"a":"ta","c":"DA","s":"Mutfak","n":""}," masa ve dört sandalye var. Salon",{"a":"da","c":"DA","s":"Salon","n":""}," büyük bir koltuk var."],["Ev şehir",{"a":"den","c":"DAn","s":"şehir","n":"Uzak (loin) veut -DAn : « loin de »."}," biraz uzak ama deniz",{"a":"e","c":"A","s":"deniz","n":"Yakın (près) veut -A : « près de »."}," yakın."],["Balkon",{"a":"da","c":"DA","s":"Balkon","n":""}," çiçekler var. Sabah balkon",{"a":"a","c":"A","s":"balkon","n":""}," çıkıyorum ve çay içiyorum. Akşam bahçe",{"a":"ye","c":"A","s":"bahçe","n":""}," çıkıyorum. Bahçe",{"a":"de","c":"DA","s":"Bahçe","n":""}," çocuklar oynuyor."]],"t":"Mon nouvel appartement est au troisième étage. Dans l'appartement, il y a trois pièces. Dans la cuisine, il y a une table et quatre chaises. Dans le salon, il y a un grand canapé. L'appartement est un peu loin de la ville mais près de la mer. Sur le balcon, il y a des fleurs. Le matin, je sors sur le balcon et je bois du thé. Le soir, je sors dans le jardin. Dans le jardin, des enfants jouent."},{"id":"t12","tr":"Fiillerle","fr":"Avec certains verbes","p":[["Arkadaşım kedi",{"a":"den","c":"DAn","s":"kedi","n":"Korkmak (avoir peur) veut -DAn : « avoir peur de »."}," korkuyor. Ben müzik",{"a":"ten","c":"DAn","s":"müzik","n":"Hoşlanmak (aimer bien) veut -DAn."}," hoşlanıyorum. Öğretmen",{"a":"e","c":"A","s":"Öğretmen","n":"Sormak (poser une question) veut -A : on pose la question « à » quelqu'un."}," soru soruyorum. Ali'",{"a":"den","c":"DAn","s":"Ali'","n":"Yardım istemek : on demande de l'aide « à » quelqu'un avec -DAn."}," yardım istiyorum."],["Annem",{"a":"e","c":"A","s":"Annem","n":"Telefon etmek (téléphoner) veut -A."}," telefon ediyorum. Çocuklar kuş",{"a":"a","c":"A","s":"kuş","n":"Bakmak (regarder) veut -A."}," bakıyor. Ben bu şarkı",{"a":"ya","c":"A","s":"şarkı","n":"Bayılmak (adorer) veut -A."}," bayılıyorum. Sen bu film",{"a":"den","c":"DAn","s":"film","n":"Sıkılmak (s'ennuyer) veut -DAn."}," sıkılıyor musun?"]],"t":"Mon ami a peur des chats. J'aime bien la musique. Je pose une question au professeur. Je demande de l'aide à Ali. J'appelle ma mère. Les enfants regardent l'oiseau. J'adore cette chanson. Tu t'ennuies avec ce film ?"}]};
+const T=DATA.texts;
+const OPTS={'DA':['da','de','ta','te'],'DAn':['dan','den','tan','ten'],'A':['a','e','ya','ye']};
+const OPTLABEL={'DA':'-DA · lieu','DAn':'-DAn · origine','A':'-(y)A · direction'};
+const CASENAME={'DA':'-DA (lieu)','DAn':'-DAn (origine)','A':'-(y)A (direction)'};
+const KEY='bosluk-doldur-v1';
+let S={cur:'t1',mode:'ex',draft:{},graded:{},done:{},stats:{cat:{DA:[0,0],DAn:[0,0],A:[0,0]},conf:{},err:{vowel:0,cons:0,glide:0,empty:0},miss:{},recent:[]}};
+try{const r=JSON.parse(localStorage.getItem(KEY)||'null');if(r){S=Object.assign(S,r);}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const lower=s=>s.replace(/İ/g,'i').replace(/I/g,'ı').toLowerCase();
+const VOW='aıoueiöü';
+function info(stem){
+ const w=lower(stem).replace(/[^a-zçğıöşü]/g,'');let lv='';
+ for(const ch of w)if(VOW.includes(ch))lv=ch;
+ const last=w[w.length-1],endV=VOW.includes(last);
+ return {w,lv,back:'aıou'.includes(lv),last,endV,vl:!endV&&'çfhkpsşt'.includes(last)};
+}
+function expected(stem,c){const i=info(stem),a=i.back?'a':'e';if(c==='A')return(i.endV?'y':'')+a;return(i.vl?'t':'d')+a+(c==='DAn'?'n':'');}
+function parse(s){const c=/^[dt][ae]n$/.test(s)?'DAn':/^[dt][ae]$/.test(s)?'DA':'A';return{c,v:s.includes('a')?'a':'e',cons:c==='A'?null:s[0],glide:c==='A'&&s[0]==='y'};}
+const CASEWHY={DA:'-DA exprime le lieu : on est à cet endroit, ou quelque chose y est (var, yok).',DAn:'-DAn exprime l\'origine ou le départ : on vient de cet endroit, on en sort.',A:'-(y)A exprime la direction : on va vers cet endroit, ou on s\'adresse à quelqu\'un.'};
+function why(b){
+ const i=info(b.s),parts=[];
+ parts.push(b.n||CASEWHY[b.c]);
+ parts.push('Dernière voyelle de « '+b.s.replace(/'$/,'')+' » : '+i.lv+' ('+(i.back?'grave':'aiguë')+') → '+(i.back?'a':'e')+'.');
+ if(b.c==='A')parts.push(i.endV?'Le mot finit par une voyelle : on ajoute y.':'Le mot finit par une consonne : pas de y.');
+ else parts.push(i.endV?'Le mot finit par une voyelle : d.':(i.vl?'« '+i.last+' » fait partie de ç f h k p s ş t : t.':'« '+i.last+' » n\'est pas dans ç f h k p s ş t : d.'));
+ return parts;
+}
+function cur(){return T.find(t=>t.id===S.cur)||T[0];}
+function blanksOf(t){const a=[];t.p.forEach(p=>p.forEach(b=>{if(typeof b==='object')a.push(b);}));return a;}
+function render(){
+ document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.m===S.mode));
+ S.mode==='ex'?renderEx():renderStats();
+}
+function renderEx(){
+ const t=cur(),bl=blanksOf(t),g=S.graded[t.id],ans=g||S.draft[t.id]||[];
+ let idx=0,html='';
+ html+='<div class="pick" id="pick">'+T.map((x,k)=>{const d=S.done[x.id];return '<button type="button" data-id="'+x.id+'" aria-pressed="'+(x.id===t.id)+'">'+(k+1)+' · '+esc(x.tr)+(d?'<span class="sc">'+d.ok+'/'+d.n+'</span>':'')+'</button>';}).join('')+'</div>';
+ html+='<div class="text"><div class="ttl"><h2>'+esc(t.tr)+'</h2><span>'+esc(t.fr)+' · '+bl.length+' trous</span></div>';
+ t.p.forEach(p=>{
+  html+='<p>';let pend='';
+  p.forEach((b,pi)=>{
+   if(typeof b==='string'){
+    const nx=p[pi+1];let txt=b,stemTxt='';
+    if(nx&&typeof nx==='object'){const m=b.match(/[\wçğıöşüÇĞİÖŞÜ']+$/);if(m){stemTxt=m[0];txt=b.slice(0,b.length-stemTxt.length);}}
+    html+=esc(txt);pend=stemTxt;return;}
+   const k=idx++,v=ans[k]||'';const pe=pend;pend='';
+   let cls='',extra='';
+   if(g){const ok=v===b.a;cls=ok?'ok':'no';if(!ok)extra='<span class="fix">'+b.a+'</span>';}
+   html+='<span class="blank">'+esc(pe)+'<select id="b'+k+'" data-k="'+k+'" class="'+cls+'" aria-label="Terminaison après '+esc(b.s)+'"'+(g?' disabled':'')+'><option value="">…</option>'+Object.keys(OPTS).map(c=>'<optgroup label="'+OPTLABEL[c]+'">'+OPTS[c].map(o=>'<option value="'+o+'"'+(v===o?' selected':'')+'>'+o+'</option>').join('')+'</optgroup>').join('')+'</select>'+extra+'</span>';
+  });
+  html+='</p>';
+ });
+ html+='<details class="tr"><summary>Voir la traduction</summary><p style="line-height:1.6;font-size:1rem">'+esc(t.t)+'</p></details></div>';
+ if(!g)html+='<div class="row"><button class="btn pri" id="chk" type="button">Corriger</button><button class="btn" id="clr" type="button">Tout effacer</button></div>';
+ else html+=resultHtml(t,bl,g)+'<div class="row"><button class="btn" id="redo" type="button">Refaire ce texte</button><button class="btn pri" id="nxt" type="button">Texte suivant</button></div>';
+ $('main').innerHTML=html;
+ $('pick').querySelectorAll('button').forEach(b=>b.onclick=()=>{S.cur=b.dataset.id;save();renderEx();window.scrollTo(0,0);});
+ if(!g){
+  document.querySelectorAll('.blank select').forEach(s=>s.onchange=()=>{const a=S.draft[t.id]||(S.draft[t.id]=[]);a[+s.dataset.k]=s.value;save();});
+  $('chk').onclick=()=>grade(t,bl);
+  $('clr').onclick=()=>{delete S.draft[t.id];save();renderEx();};
+ }else{
+  $('redo').onclick=()=>{delete S.graded[t.id];delete S.draft[t.id];save();renderEx();window.scrollTo(0,0);};
+  $('nxt').onclick=()=>{const k=T.findIndex(x=>x.id===t.id);S.cur=T[(k+1)%T.length].id;save();renderEx();window.scrollTo(0,0);};
+ }
+}
+function grade(t,bl){
+ const a=[];bl.forEach((b,k)=>{const s=document.getElementById('b'+k);a[k]=s?s.value:'';});
+ let ok=0;
+ bl.forEach((b,k)=>{
+  const g=a[k],st=S.stats,good=g===b.a;
+  st.cat[b.c][0]++;if(good){st.cat[b.c][1]++;ok++;return;}
+  const key=b.s.toLowerCase();st.miss[key]=(st.miss[key]||0)+1;
+  if(!g){st.err.empty++;}
+  else{
+   const e=parse(b.a),p=parse(g);
+   if(e.c!==p.c){const kk=e.c+'>'+p.c;st.conf[kk]=(st.conf[kk]||0)+1;}
+   else{if(e.v!==p.v)st.err.vowel++;if(e.cons!==p.cons)st.err.cons++;if(e.glide!==p.glide)st.err.glide++;}
+  }
+  st.recent.unshift({s:b.s,g:g||'—',a:b.a,c:b.c});
+ });
+ S.stats.recent=S.stats.recent.slice(0,12);
+ S.graded[t.id]=a;S.done[t.id]={ok,n:bl.length};delete S.draft[t.id];save();renderEx();
+ const r=document.getElementById('res');if(r)r.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function resultHtml(t,bl,g){
+ const wrong=bl.map((b,k)=>({b,v:g[k]})).filter(x=>x.v!==x.b.a);
+ const ok=bl.length-wrong.length;
+ let h='<div class="result" id="res"><div class="score">'+ok+' / '+bl.length+'</div><div class="note">'+(wrong.length?'Voici tes erreurs, avec la raison.':'Sans faute. Passe au texte suivant.')+'</div></div>';
+ wrong.forEach(x=>{
+  const b=x.b,ps=why(b);
+  h+='<div class="err"><div class="w"><span>'+esc(b.s)+'</span> <span class="bad">'+(x.v||'…')+'</span> <span class="good">'+b.a+'</span> <span class="tag '+b.c+'">'+CASENAME[b.c]+'</span></div>'+ps.map(p=>'<small>'+esc(p)+'</small>').join('')+'</div>';
+ });
+ return h;
+}
+function pct(a){return a[0]?Math.round(100*a[1]/a[0]):0;}
+function renderStats(){
+ const st=S.stats,tot=['DA','DAn','A'].reduce((n,c)=>n+st.cat[c][0],0),okn=['DA','DAn','A'].reduce((n,c)=>n+st.cat[c][1],0);
+ if(!tot){$('main').innerHTML='<div class="card"><h2>Pas encore de résultats</h2><div class="note">Corrige un texte dans l\'onglet Exercice. Ici, tu verras sur quelles terminaisons tu te trompes le plus et pourquoi.</div></div>';return;}
+ let h='';
+ // verdict
+ const cats=['DA','DAn','A'].filter(c=>st.cat[c][0]>=3).sort((a,b)=>pct(st.cat[a])-pct(st.cat[b]));
+ const confs=Object.entries(st.conf).sort((a,b)=>b[1]-a[1]);
+ const errs=[['vowel',st.err.vowel],['cons',st.err.cons],['glide',st.err.glide]].sort((a,b)=>b[1]-a[1]);
+ let v='Tu as réussi '+okn+' trous sur '+tot+' ('+Math.round(100*okn/tot)+' %).';
+ const nerr=tot-okn;
+ if(nerr){
+  const kinds=[];
+  if(confs.length)kinds.push(['case',confs.reduce((n,x)=>n+x[1],0)]);
+  kinds.push(...errs.filter(e=>e[1]>0));if(st.err.empty)kinds.push(['empty',st.err.empty]);
+  kinds.sort((a,b)=>b[1]-a[1]);
+  const top=kinds[0];
+  const T2={case:'Ton point faible : choisir le bon cas (lieu, origine ou direction). Relis le sens de la phrase avant de choisir.',vowel:'Ton point faible : la voyelle a / e. Regarde la dernière voyelle du mot : a ı o u donnent a, e i ö ü donnent e.',cons:'Ton point faible : d ou t. Après ç f h k p s ş t, on écrit t.',glide:'Ton point faible : le y de -(y)A. On l\'ajoute seulement quand le mot finit par une voyelle.',empty:'Tu laisses des trous vides. Essaie de répondre à chaque fois, même sans être sûr.'};
+  if(top)v+=' '+T2[top[0]];
+ }else v+=' Aucune erreur pour l\'instant.';
+ h+='<div class="verdict">'+esc(v)+'</div>';
+ h+='<div class="card"><h2>Réussite par terminaison</h2><div class="bars">'+['DA','DAn','A'].map(c=>'<div class="bar"><span><span class="tag '+c+'">'+CASENAME[c].split(' ')[0]+'</span></span><i><b class="'+c+'" style="width:'+pct(st.cat[c])+'%"></b></i><span>'+(st.cat[c][0]?pct(st.cat[c])+' %':'—')+'</span></div>').join('')+'</div><div class="note">Trous joués : '+['DA','DAn','A'].map(c=>CASENAME[c].split(' ')[0]+' '+st.cat[c][0]).join(' · ')+'</div></div>';
+ const e=st.err,maxe=Math.max(1,confs.reduce((n,x)=>n+x[1],0),e.vowel,e.cons,e.glide);
+ const caseTotal=confs.reduce((n,x)=>n+x[1],0);
+ h+='<div class="card"><h2>Types d\'erreurs</h2><div class="bars">'+[['Mauvais cas',caseTotal],['Voyelle a / e',e.vowel],['d ou t',e.cons],['y oublié ou en trop',e.glide],['Trou vide',e.empty]].map(x=>'<div class="bar"><span>'+x[0]+'</span><i><b class="v" style="width:'+Math.round(100*x[1]/Math.max(maxe,e.empty))+'%"></b></i><span>'+x[1]+'</span></div>').join('')+'</div>';
+ if(confs.length)h+='<div class="note">Confusions entre cas : '+confs.map(x=>{const [a,b]=x[0].split('>');return 'tu as mis '+CASENAME[b].split(' ')[0]+' au lieu de '+CASENAME[a].split(' ')[0]+' ('+x[1]+')';}).join(' · ')+'</div>';
+ h+='</div>';
+ const miss=Object.entries(st.miss).sort((a,b)=>b[1]-a[1]).slice(0,8);
+ if(miss.length)h+='<div class="card"><h2>Mots les plus ratés</h2><ul>'+miss.map(m=>'<li><b>'+esc(m[0])+'</b> : '+m[1]+' erreur'+(m[1]>1?'s':'')+'</li>').join('')+'</ul></div>';
+ if(st.recent.length)h+='<div class="card"><h2>Dernières erreurs</h2><ul>'+st.recent.map(r=>'<li><b>'+esc(r.s)+'</b> : tu as mis <span style="color:var(--bad)">'+esc(r.g)+'</span>, la bonne réponse est <span style="color:var(--good);font-weight:700">'+r.a+'</span></li>').join('')+'</ul></div>';
+ h+='<div class="card"><div class="note">Ces chiffres sont enregistrés sur cet appareil. Les trous vides comptent comme des erreurs.</div><button class="btn" id="rst" type="button">Effacer mes résultats</button></div>';
+ $('main').innerHTML=h;
+ $('rst').onclick=()=>{$('rst').outerHTML='<div class="row"><button class="btn pri" id="rst2" type="button">Oui, tout effacer</button><button class="btn" id="rst3" type="button">Annuler</button></div>';
+  $('rst2').onclick=()=>{S.stats={cat:{DA:[0,0],DAn:[0,0],A:[0,0]},conf:{},err:{vowel:0,cons:0,glide:0,empty:0},miss:{},recent:[]};S.done={};S.graded={};S.draft={};save();render();};
+  $('rst3').onclick=()=>renderStats();};
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{S.mode=b.dataset.m;save();render();});
+$('theme').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark';};
+render();
+</script>
+
+</body></html>
